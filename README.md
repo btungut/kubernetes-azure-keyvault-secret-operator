@@ -34,7 +34,7 @@ kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret
 
 
 ## What is AzureKeyVault custom resource definition ?
-**AzureKeyVault** is a custom resource definition which is being tracked by operator. It is cluster scoped and includes references for Azure KeyVault, service principal and to be synced kubernetes clusters.
+**AzureKeyVault** is a custom resource definition which is being tracked by operator. It is cluster scoped and includes references for Azure KeyVault, service principal and to be synced secrets accross kubernetes cluster.
 
 ```
 apiVersion: btungut.io/v1
@@ -68,7 +68,7 @@ spec:
 
 `spec.name` and `spec.resourceGroup` needs to point your Azure KeyVault resource.
 
-As we mentioned before, you need to have a service principal that is used to access Azure KeyVault. You need to create a secret **manually** which includes service principal informations. You're completely free for naming of fields. 
+As we mentioned before, you need to have a service principal that is used to access Azure KeyVault. You need to create a secret **manually** which includes service principal informations. You're completely free for naming of the fields. 
 
 Assuming you have following secret in **my-infra-namespace** namespace;
 ```
