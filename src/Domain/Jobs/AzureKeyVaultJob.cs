@@ -40,12 +40,31 @@
                 foreach (var copyTo in item.CopyTo)
                 {
                     var resource = new Resource(copyTo.Namespace, copyTo.SecretName);
-                    await SyncSecret(crd, resource, item.Name, kvSecret.Data);
+                    
+                    var secretType = GetSecretType(copyTo.SecretType);
+                    if(!secretType.HasValue)
+                    {
+                        _logger.Warning("Type field {field} for secret {resource} couldn't be resolved! This secret is skipping...", copyTo.SecretType, resource);
+                        continue;
+                    }
+
+                    try
+                    {
+                        await SyncSecret(crd, resource, secretType.Value, item.Name, kvSecret.Data);
+                    }
+                    catch (NotImplementedException e)
+                    {
+                        _logger.Error(e, "Secret couldn't be synced {resource}. It uses not supported features, please check new versions", resource);
+                    }
+                    catch(Exception e)
+                    {
+                        _logger.Error(e, "Secret couldn't be synced {resource}. Unexpected error, skipping...", resource);
+                    }
                 }
             }
         }
 
-        private async Task SyncSecret(AzureKeyVault crd, Resource resource, string kvKey, string kvValue)
+        private async Task SyncSecret(AzureKeyVault crd, Resource resource, SecretTypes secretType, string kvKey, string kvValue)
         {
             var secretGetResult = await _client.InvokeAsync(c => c.ReadNamespacedSecretAsync(resource.Name, resource.Namespace));
 
@@ -54,7 +73,7 @@
                 _logger.Debug("Secret is found {resource} and will be replaced", resource);
 
                 V1Secret secret = secretGetResult.Data;
-                FillV1Secret(secret, crd, new Dictionary<string, string> { { kvKey, kvValue } });
+                FillV1Secret(secret, crd, kvKey, kvValue, secretType);
 
                 var replaceResult = await _client.InvokeAsync(c => c.ReplaceNamespacedSecretAsync(secret, resource.Name, resource.Namespace));
                 if (!replaceResult.IsSucceeded)
@@ -77,7 +96,7 @@
                 {
                     Metadata = new V1ObjectMeta(name: resource.Name, namespaceProperty: resource.Namespace)
                 };
-                FillV1Secret(secret, crd, new Dictionary<string, string> { { kvKey, kvValue } });
+                FillV1Secret(secret, crd, kvKey, kvValue, secretType);
 
                 var createResult = await _client.InvokeAsync(c => c.CreateNamespacedSecretAsync(secret, resource.Namespace));
                 if (!createResult.IsSucceeded)
@@ -98,14 +117,66 @@
             }
         }
 
-        private void FillV1Secret(V1Secret secret, AzureKeyVault crd, IDictionary<string, string> stringData, string secretType = "Opaque")
+        private void FillV1Secret(V1Secret secret, AzureKeyVault crd, string key, string value, SecretTypes secretType)
         {
-            secret.Data = stringData.ToDictionary(k => k.Key, v => Encoding.UTF8.GetBytes(v.Value));
-            secret.Type = secretType;
             secret.SetLabel(Constants.SecretLabelKey, Constants.SecretLabelValue);
             secret.SetLabel("ownerId", crd.Name());
             secret.SetAnnotation(Constants.SecretUpdatedAnnotation, DateTime.UtcNow.ToString());
             secret.SetAnnotation(Constants.SecretSyncVersionAnnotation, crd.Spec.SyncVersion.ToString());
+
+            if(secretType == SecretTypes.Opaque)
+            {
+                secret.Data = CreateSecretDictionary(key, value);
+                secret.Type = "Opaque";
+            }
+            else if(secretType == SecretTypes.DockerConfigJson)
+            {
+                secret.Data = CreateSecretDictionary(".dockerconfigjson", value);
+                secret.Type = "kubernetes.io/dockerconfigjson";
+            }
+            else
+            {
+                throw new NotImplementedException($"{secretType} is not supported yet.");
+            }
+        }
+
+        private IDictionary<string, byte[]> CreateSecretDictionary(string key, string value)
+        {
+            return new Dictionary<string, byte[]> 
+            {
+                { key, Encoding.UTF8.GetBytes(value) } 
+            };
+        }
+
+        static Dictionary<string, SecretTypes> _secretTypeMatchings = new Dictionary<string, SecretTypes>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "opaque", SecretTypes.Opaque },
+            { "kubernetes.io/service-account-token", SecretTypes.ServiceAccountToken },
+            { "kubernetes.io/dockercfg", SecretTypes.DockerCfg },
+            { "kubernetes.io/dockerconfigjson", SecretTypes.DockerConfigJson },
+            { "kubernetes.io/basic-auth", SecretTypes.BasicAuth },
+            { "kubernetes.io/ssh-auth", SecretTypes.SshAuth },
+            { "kubernetes.io/tls", SecretTypes.TLS },
+            { "bootstrap.kubernetes.io/token", SecretTypes.Token },
+        };
+        private SecretTypes? GetSecretType(string type)
+        {
+            if (_secretTypeMatchings.TryGetValue(type, out var result))
+                return result;
+
+            return null;
+        }
+
+        enum SecretTypes
+        {
+            Opaque,
+            DockerConfigJson,
+            DockerCfg,
+            ServiceAccountToken,
+            BasicAuth,
+            SshAuth,
+            TLS,
+            Token
         }
     }
 }

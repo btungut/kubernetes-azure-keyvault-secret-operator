@@ -83,6 +83,11 @@ spec:
                             secretName:
                               type: string
                               description: "Name of to be created secret"
+                            secretType:
+                              type: string
+                              description: "Type of to be created secret (default : Opaque)"
+                              pattern: "(^[Oo]paque$)|(^kubernetes.io/(service-account-token|dockercfg|dockerconfigjson|basic-auth|ssh-auth|tls)$)|(^bootstrap.kubernetes.io/token$)"
+                              default: "Opaque"
       additionalPrinterColumns:
         - name: "syncVersion"
           jsonPath: .spec.syncVersion

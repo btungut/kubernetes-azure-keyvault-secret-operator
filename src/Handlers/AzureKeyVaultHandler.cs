@@ -169,7 +169,6 @@
 
         private async Task ReconcileManagedSecrets(IKubernetes client)
         {
-            //TODO : dangling secret'ları bul ve sil
             var crds = _bag.ToArray();
 
             foreach (var crd in crds)
@@ -180,7 +179,7 @@
                     var secretResource = new Resource(secret.Namespace, secret.SecretName);
                     var apiResult = await client.InvokeAsync(c => c.ReadNamespacedSecretAsync(secretResource.Name, secretResource.Namespace));
 
-                    var secretSyncVersion = apiResult.Data.GetAnnotation(Constants.SecretSyncVersionAnnotation);
+                    var secretSyncVersion = apiResult.Data?.GetAnnotation(Constants.SecretSyncVersionAnnotation);
                     if (apiResult.IsSucceeded && secretSyncVersion != null && Convert.ToInt32(secretSyncVersion) == crd.Value.Spec.SyncVersion)
                     {
                         _logger.Information("OnReconciliation : {resource} syncVersion:{version} is exist and syncVersions are same, no need to take action.", secretResource, secretSyncVersion);

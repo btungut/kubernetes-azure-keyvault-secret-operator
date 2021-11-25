@@ -19,11 +19,11 @@ rules:
 
   - apiGroups: [btungut.io]
     resources: [azurekeyvaults]
-    verbs: [list, watch, patch, get]
+    verbs: [list, watch, patch, get, update]
 
-  - apiGroups: [btungut.io]
+  - apiGroups: [apiextensions.k8s.io]
     resources: [customresourcedefinitions]
-    verbs: [list, watch, get, patch]
+    verbs: [list, get]
 
   - apiGroups: [events.k8s.io]
     resources: [events]

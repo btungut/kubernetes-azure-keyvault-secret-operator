@@ -11,8 +11,6 @@
 
         public static async Task<V1Secret> GetAsync(string @namespace, string name)
         {
-            //TODO : çok iyi test et yeni using kulanımı var
-            //TODO : cache test
             CacheControl();
 
             var resource = GetKey(@namespace, name);

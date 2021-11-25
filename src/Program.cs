@@ -5,7 +5,6 @@ using System.Diagnostics;
 
 namespace Operator
 {
-    //TODO: secret types, docker etc.
     //TODO: status
     public class Program
     {

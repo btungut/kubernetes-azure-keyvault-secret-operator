@@ -2,8 +2,8 @@
 {
     internal class Constants
     {
-        public const string SecretUpdatedAnnotation = $"{CrdApiGroup}/updated";
-        public const string SecretSyncVersionAnnotation = $"{CrdApiGroup}/syncVersion";
+        public const string SecretUpdatedAnnotation = $"{CrdName}/updated";
+        public const string SecretSyncVersionAnnotation = $"{CrdName}/syncVersion";
         public const string SecretLabelKey = "owner";
         public const string SecretLabelValue = CrdName;
 

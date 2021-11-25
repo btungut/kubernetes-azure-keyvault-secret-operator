@@ -17,7 +17,7 @@ spec:
       restartPolicy: Always
       containers:
       - name: operator
-        image: k3s-nonprod-01:5000/operator:3
+        image: k3s-nonprod-01:5000/operator:5
         env:
           - name: LogLevel
             value: "Debug" # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)

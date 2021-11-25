@@ -48,9 +48,7 @@ namespace Operator.CRDs
                 {
                     public string Namespace { get; set; }
                     public string SecretName { get; set; }
-
-                    //optional, default : Opaque
-                    public string Type { get; set; } = "opaque";
+                    public string SecretType { get; set; }
                 }
             }
         }
