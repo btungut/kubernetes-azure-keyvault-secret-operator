@@ -1,0 +1,21 @@
+apiVersion: v1
+entries:
+  azure-keyvault-secret-operator:
+  - apiVersion: v2
+    appVersion: 0.0.1
+    created: "2021-11-26T02:01:28.6093087+03:00"
+    description: Kubernetes operator which enables your cluster to sync secrets with
+      Azure KeyVault in easiest way
+    digest: 6daa190e08bdb313b1b851f672a3ef233a9188254a1e9aff95e01dfcf371aafd
+    home: https://github.com/btungut/azure-keyvault-secret-operator
+    maintainers:
+    - email: buraktungut@gmail.com
+      name: Burak Tungut
+    name: azure-keyvault-secret-operator
+    sources:
+    - https://github.com/btungut/azure-keyvault-secret-operator
+    type: application
+    urls:
+    - https://github.com/btungut/azure-keyvault-secret-operator/releases/download/0.0.1/chart.tgz
+    version: 0.0.1
+generated: "2021-11-26T02:01:28.6060353+03:00"

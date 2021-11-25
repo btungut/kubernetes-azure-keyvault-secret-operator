@@ -4,3 +4,9 @@ description: Kubernetes operator which enables your cluster to sync secrets with
 type: application
 version: 0.0.1
 appVersion: "0.0.1"
+sources:
+  - https://github.com/btungut/azure-keyvault-secret-operator
+home: https://github.com/btungut/azure-keyvault-secret-operator
+maintainers:
+  - name: Burak Tungut
+    email: buraktungut@gmail.com
