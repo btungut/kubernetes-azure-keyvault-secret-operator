@@ -1,3 +1,4 @@
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/azure-keyvault-secret-operator)](https://artifacthub.io/packages/search?repo=azure-keyvault-secret-operator)
 # Azure KeyVault Secret Operator
 Easy to use operator which is able to **sync all of the Azure KeyVault contents** into your Kubernetes cluster with **only one manifest**. 
 
