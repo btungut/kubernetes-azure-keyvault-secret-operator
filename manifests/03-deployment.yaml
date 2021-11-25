@@ -8,6 +8,8 @@ spec:
   selector:
     matchLabels:
       app: azure-keyvault-secret-operator
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -17,7 +19,7 @@ spec:
       restartPolicy: Always
       containers:
       - name: operator
-        image: k3s-nonprod-01:5000/operator:5
+        image: btungut/azure-keyvault-secret-operator:0.0.1
         env:
           - name: LogLevel
             value: "Debug" # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)

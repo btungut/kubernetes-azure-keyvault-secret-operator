@@ -71,6 +71,10 @@ namespace Operator
             {
                 AppConfiguration.LogLevel = Serilog.Events.LogEventLevel.Verbose;
             }
+
+            //Validation
+            if (AppConfiguration.ReconciliationFrequency < TimeSpan.FromSeconds(10))
+                throw new ArgumentOutOfRangeException(nameof(AppConfiguration.ReconciliationFrequency), "ReconciliationFrequency couldn't be less than 10 seconds.");
         }
 
         private static void ConfigureLogging()
