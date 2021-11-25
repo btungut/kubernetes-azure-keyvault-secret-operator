@@ -22,7 +22,7 @@ spec:
         image: btungut/azure-keyvault-secret-operator:0.0.1
         env:
           - name: LogLevel
-            value: "Debug" # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)
+            value: "Information" # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)
           - name: EnableJsonLogging
             value: "false" # valid values : true, false (default : false) 
           - name: ReconciliationFrequency
