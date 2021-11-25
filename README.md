@@ -11,23 +11,27 @@ You can find the helm packages in [releases]([https://link](https://github.com/b
 
 From published release;
 
-`helm upgrade -i azure-keyvault-secret-operator https://github.com/btungut/azure-keyvault-secret-operator/releases/download/0.0.1/chart.tgz`
+```
+helm upgrade -i azure-keyvault-secret-operator https://github.com/btungut/azure-keyvault-secret-operator/releases/download/0.0.1/chart.tgz
+```
 
 or you can clone the repository
 
-`git clone https://github.com/btungut/azure-keyvault-secret-operator.git .`
-
-`helm upgrade -i azure-keyvault-secret-operator ./helm`
+```
+git clone https://github.com/btungut/azure-keyvault-secret-operator.git .
+helm upgrade -i azure-keyvault-secret-operator ./helm
+```
 
 ### Deploy with manifests 
 Please visit the **manifests** folder as you can see there are three manifests.
 
-`kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/master/manifests/01-crd.yaml`
+```
+kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/master/manifests/01-crd.yaml
 
-`kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/master/manifests/02-rbac.yaml`
+kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/master/manifests/02-rbac.yaml
 
-`kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/master/manifests/03-deployment.yaml`
-
+kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/master/manifests/03-deployment.yaml
+```
 
 
 ## What is AzureKeyVault custom resource definition ?
