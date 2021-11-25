@@ -7,7 +7,7 @@ Operator can run on non Azure environments without any kind of other prerequisit
 ## Deployment
 Operator may be installed into cluster with helm chart or directly manifests.
 ### Deploy with Helm Chart
-You can find the helm packages in [releases]([https://link](https://github.com/btungut/azure-keyvault-secret-operator/releases)) page. Helm chart supports RBAC and CRD manifests installation. You can pass `--set rbac.enabled=false` if you don't need.
+You can find the helm packages in [releases](https://github.com/btungut/azure-keyvault-secret-operator/releases) page. Helm chart supports RBAC and CRD manifests installation. You can pass `--set rbac.enabled=false` if you don't need.
 
 From published release;
 
@@ -23,7 +23,7 @@ helm upgrade -i azure-keyvault-secret-operator ./helm
 ```
 
 ### Deploy with manifests 
-Please visit the **manifests** folder as you can see there are three manifests.
+Please visit the [manifests](https://github.com/btungut/azure-keyvault-secret-operator/tree/master/manifests) folder as you can see there are three manifests.
 
 ```
 kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/master/manifests/01-crd.yaml
@@ -111,7 +111,7 @@ spec:
 ```
 
 ## Configuration
-You can change the configurable values in values.yaml of helm chart
+You can change the configurable values in [values.yaml](https://github.com/btungut/azure-keyvault-secret-operator/blob/master/helm/values.yaml) of helm chart
 
 ```
 ...
@@ -122,7 +122,7 @@ configs:
 ...
 ```
 
-these are defined in deployment if you're not using helm chart
+these are defined in [deployment.yaml](https://github.com/btungut/azure-keyvault-secret-operator/blob/master/manifests/03-deployment.yaml) if you're not using helm chart
 
 ```
         env:
