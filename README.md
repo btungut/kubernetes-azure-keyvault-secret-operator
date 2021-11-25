@@ -22,11 +22,11 @@ or you can clone the repository
 ### Deploy with manifests 
 Please visit the **manifests** folder as you can see there are three manifests.
 
-`kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/baseline/manifests/01-crd.yaml`
+`kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/master/manifests/01-crd.yaml`
 
-`kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/baseline/manifests/02-rbac.yaml`
+`kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/master/manifests/02-rbac.yaml`
 
-`kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/baseline/manifests/03-deployment.yaml`
+`kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret-operator/master/manifests/03-deployment.yaml`
 
 
 
