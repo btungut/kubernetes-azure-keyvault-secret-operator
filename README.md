@@ -14,8 +14,8 @@ Operator may be installed into cluster with helm chart or directly manifests.
 You can find the helm packages in [releases](https://github.com/btungut/azure-keyvault-secret-operator/releases) page. Helm chart supports RBAC and CRD manifests installation. You can pass `--set rbac.enabled=false` if you don't need.
 
 ```
-helm repo add azure-keyvault-secret-operator https://btungut.github.io/azure-keyvault-secret-operator
-helm upgrade -i {RELEASE-NAME} azure-keyvault-secret-operator/azure-keyvault-secret-operator
+helm repo add btungut https://btungut.github.io
+helm upgrade -i {RELEASE-NAME} btungut/azure-keyvault-secret-operator
 ```
 
 
