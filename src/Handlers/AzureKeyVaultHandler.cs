@@ -1,34 +1,20 @@
-﻿namespace Operator.Handlers
+﻿using System.Diagnostics;
+
+namespace Operator.Handlers
 {
     public class AzureKeyVaultHandler : ICRDEventHandler<AzureKeyVault>
     {
         private static ILogger _logger = LoggerFactory.GetLogger<AzureKeyVaultHandler>();
 
-        private static Dictionary<Resource, AzureKeyVault> _bag = new Dictionary<Resource, AzureKeyVault>();
+        internal static ObjectContext<Resource, AzureKeyVault> Context = new ObjectContext<Resource, AzureKeyVault>();
         private static AzureKeyVaultJob _job = new AzureKeyVaultJob();
         private static JobRuner<AzureKeyVault> _jobRunner = new JobRuner<AzureKeyVault>(_job);
-
-        private static SemaphoreSlim _reconciliationSemaphore = new SemaphoreSlim(1, 1);
-
 
         public async Task OnAdded(IKubernetes client, AzureKeyVault crd)
         {
             var key = GetKey(crd);
-
-            await _reconciliationSemaphore.WaitAsync();
-            try
-            {
-                _bag[GetKey(crd)] = crd;
-                _jobRunner.Enqueue(crd);
-            }
-            catch (Exception e)
-            {
-                _logger.Error(e, "OnAdded is failed for {key}", key);
-            }
-            finally
-            {
-                _reconciliationSemaphore.Release();
-            }
+            await Context.SetAsync(key, crd);
+            _jobRunner.Enqueue(crd);
         }
 
         public async Task OnUpdated(IKubernetes client, AzureKeyVault crd)
@@ -36,102 +22,75 @@
             var key = GetKey(crd);
             bool isSyncVersionChanged = false;
 
-            await _reconciliationSemaphore.WaitAsync();
-            try
+            await Context.ExclusiveAsync(key, (oldCrd) =>
             {
-                if (_bag.TryGetValue(key, out AzureKeyVault currentCrd) && currentCrd.Spec.SyncVersion != crd.Spec.SyncVersion)
-                {
-                    isSyncVersionChanged = true;
-                }
+                isSyncVersionChanged = oldCrd.Spec.SyncVersion != crd.Spec.SyncVersion;
+                return Task.CompletedTask;
+            });
 
-                _bag[key] = crd;
+            if (isSyncVersionChanged)
+            {
+                ServicePrincipalSecretContainer.Flush();
+            }
 
-                if (isSyncVersionChanged)
-                {
-                    //Flush caches and process it DIRETLY instead of to enqueue.
-                    ServicePrincipalSecretContainer.Flush();
-                    await _job.RunAsync(crd);
-                }
-                else
-                {
-                    _jobRunner.Enqueue(crd);
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.Error(e, "OnUpdated is failed for {key} isSyncVersionChanged:{isSyncVersionChanged}", key, isSyncVersionChanged);
-            }
-            finally
-            {
-                _reconciliationSemaphore.Release();
-            }
+            await Context.SetAsync(key, crd);
+            _jobRunner.Enqueue(crd);
         }
 
         public async Task OnDeleted(IKubernetes client, AzureKeyVault crd)
         {
             var key = GetKey(crd);
 
-            await _reconciliationSemaphore.WaitAsync();
-            try
+            await Context.ExclusiveAsync(key, async (_) =>
             {
-                _bag.Remove(key);
-                _logger.Debug("AzureKeyVault {resource} is removed from internal cache", key);
-
                 await FinalizeSecretsAsync(client, crd);
-            }
-            catch (Exception e)
-            {
-                _logger.Error(e, "OnDeleted is failed for {key}", key);
-            }
-            finally
-            {
-                _reconciliationSemaphore.Release();
-            }
+            });
+
+            await Context.RemoveAsync(key);
         }
 
         public async Task OnReconciliation(IKubernetes client)
         {
-            await _reconciliationSemaphore.WaitAsync();
-            try
-            {
-                _logger.Information("OnReconciliation is starting");
-                await ReconcileManagedSecrets(client);
-                await ReconcileDanglingSecrets(client);
-                _logger.Information("OnReconciliation is finished");
-            }
-            catch (Exception e)
-            {
-                _logger.Error(e, "OnReconciliation is failed");
-            }
-            finally
-            {
-                _reconciliationSemaphore.Release();
-            }
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            var bag = await Context.GetSnapshotAsync();
+
+            _logger.Information("OnReconciliation is starting");
+
+            var clusterNamespaces = (await client.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
+            await ReconcileManagedSecrets(bag, client, clusterNamespaces);
+            await ReconcileDanglingSecrets(bag, client, clusterNamespaces);
+
+            stopwatch.Stop();
+            _logger.Information("OnReconciliation is finished in {elasped} ms", stopwatch.ElapsedMilliseconds);
         }
 
-        private async Task ReconcileDanglingSecrets(IKubernetes client)
+        private async Task ReconcileDanglingSecrets(KeyValuePair<Resource, AzureKeyVault>[] currentBag, IKubernetes client, string[] clusterNamespaces)
         {
+            Stopwatch stopwatch = (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) ? Stopwatch.StartNew() : null;
+
             var clusterSecrets = new List<Resource>();
-            var namespaces = await client.ListNamespaceAsync();
-            foreach (var v1Namespace in namespaces.Items)
+
+            foreach (var ns in clusterNamespaces)
             {
-                var ns = v1Namespace.Name();
                 var secrets = await client.ListNamespacedSecretAsync(ns, labelSelector: $"{Constants.SecretLabelKey}={Constants.SecretLabelValue}");
                 clusterSecrets.AddRange(secrets.Items.Select(s => new Resource(s.Namespace(), s.Name())));
             }
 
-            var secretsNeedsToBeValid = _bag.Values
-                .SelectMany(b => b.Spec.Objects.SelectMany(o => o.CopyTo))
-                .Select(s => new Resource(s.Namespace, s.SecretName))
-                .ToArray();
+            var managedSecrets = new List<Resource>();
+            foreach (var azureKeyVault in currentBag)
+            {
+                var resolved = PatternResolver.ResolveManagedSecrets(clusterNamespaces, azureKeyVault.Value.Spec.ManagedSecrets);
+                managedSecrets.AddRange(resolved);
+            }
 
-            var danglingSecrets = clusterSecrets.Except(secretsNeedsToBeValid).ToArray();
+
+            var danglingSecrets = clusterSecrets.Except(managedSecrets).ToArray();
             _logger.Information("Total {count} dangling secrets found {list}", danglingSecrets.Length, danglingSecrets);
             int succeededCount = 0;
             foreach (var secret in danglingSecrets)
             {
                 var apiResult = await client.InvokeAsync(c => c.DeleteNamespacedSecretAsync(secret.Name, secret.Namespace));
-                if(apiResult.IsSucceeded)
+                if (apiResult.IsSucceeded)
                 {
                     succeededCount++;
                     _logger.Debug("Dangling secret {resource} is deleted", secret);
@@ -142,47 +101,52 @@
                 }
             }
 
-            if(succeededCount > 0)
+            if (succeededCount > 0)
                 _logger.Information("Danling secrets are deleted {succeeded}/{total}", succeededCount, danglingSecrets.Length);
+
+            if(stopwatch != null)
+            {
+                stopwatch.Stop();
+                _logger.Debug("ReconcileDanglingSecrets finished in {elasped} ms", stopwatch.ElapsedMilliseconds);
+            }
         }
 
         private async Task FinalizeSecretsAsync(IKubernetes client, AzureKeyVault crd)
         {
-            var secretsNeedsToBeFinalized = crd.Spec.Objects.SelectMany(o => o.CopyTo);
-            _logger.Information("Secret finalization is starting for {@resource}", secretsNeedsToBeFinalized.Select(o => new Resource(o.Namespace, o.SecretName)));
+            var clusterNamespaces = (await client.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
+            var managedSecrets = PatternResolver.ResolveManagedSecrets(clusterNamespaces, crd.Spec.ManagedSecrets);
+            _logger.Information("Secret finalization is starting for {@resource}", managedSecrets);
 
-            foreach (var secret in secretsNeedsToBeFinalized)
+            foreach (var secret in managedSecrets)
             {
-                var secretResource = new Resource(secret.Namespace, secret.SecretName);
-                var apiResult = await client.InvokeAsync(c => c.DeleteNamespacedSecretAsync(secretResource.Name, secretResource.Namespace));
+                var apiResult = await client.InvokeAsync(c => c.DeleteNamespacedSecretAsync(secret.Name, secret.Namespace));
 
                 if (apiResult.IsSucceeded)
                 {
-                    _logger.Information("Secret is deleted successfully {resource}", secretResource);
+                    _logger.Information("Secret is deleted successfully {resource}", secret);
                 }
-                else
+                else if (apiResult.Status != System.Net.HttpStatusCode.NotFound)
                 {
-                    _logger.Warning(apiResult.Exception, "Secret couldn't be deleted {resource}", secretResource);
+                    _logger.Warning(apiResult.Exception, "Secret couldn't be deleted {resource}", secret);
                 }
             }
         }
 
-        private async Task ReconcileManagedSecrets(IKubernetes client)
+        private async Task ReconcileManagedSecrets(KeyValuePair<Resource, AzureKeyVault>[] currentBag, IKubernetes client, string[] clusterNamespaces)
         {
-            var crds = _bag.ToArray();
+            Stopwatch stopwatch = (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) ? Stopwatch.StartNew() : null;
 
-            foreach (var crd in crds)
+            foreach (var crd in currentBag)
             {
-                var secretsNeedsToBeValid = crd.Value.Spec.Objects.SelectMany(o => o.CopyTo);
+                var secretsNeedsToBeValid = PatternResolver.ResolveManagedSecrets(clusterNamespaces, crd.Value.Spec.ManagedSecrets);
                 foreach (var secret in secretsNeedsToBeValid)
                 {
-                    var secretResource = new Resource(secret.Namespace, secret.SecretName);
-                    var apiResult = await client.InvokeAsync(c => c.ReadNamespacedSecretAsync(secretResource.Name, secretResource.Namespace));
+                    var apiResult = await client.InvokeAsync(c => c.ReadNamespacedSecretAsync(secret.Name, secret.Namespace));
 
                     var secretSyncVersion = apiResult.Data?.GetAnnotation(Constants.SecretSyncVersionAnnotation);
                     if (apiResult.IsSucceeded && secretSyncVersion != null && Convert.ToInt32(secretSyncVersion) == crd.Value.Spec.SyncVersion)
                     {
-                        _logger.Information("OnReconciliation : {resource} syncVersion:{version} is exist and syncVersions are same, no need to take action.", secretResource, secretSyncVersion);
+                        _logger.Information("OnReconciliation : {resource} syncVersion:{version} is exist and syncVersions are same, no need to take action.", secret, secretSyncVersion);
                         continue;
                     }
 
@@ -199,17 +163,17 @@
                             crd.Value.Spec.SyncVersion, secretSyncVersion ?? "(null)");
                     }
                     //Secret is not found and we still responsible to manage it.
-                    else if (apiResult.Status == System.Net.HttpStatusCode.NotFound && _bag.ContainsKey(crd.Key))
+                    else if (apiResult.Status == System.Net.HttpStatusCode.NotFound && Context.IsExist(crd.Key))
                     {
                         _logger.Warning(
                             "OnReconciliation : Secret {secretResource} for {crdResource} is not found, it will be processed.",
-                            crd.Key, secretResource);
+                            crd.Key, secret);
                     }
                     else
                     {
                         _logger.Error(
                             apiResult.Exception, "OnReconciliation : Unexpected case {secretResource} {crdResource}",
-                            crd.Key, secretResource);
+                            crd.Key, secret);
                     }
 
                     ServicePrincipalSecretContainer.Flush();
@@ -217,64 +181,12 @@
                     break;
                 }
             }
-            #region long version
-            //foreach (var keyValuePair in crds)
-            //{
-            //    var crd = keyValuePair.Value;
-            //    bool isCrdCompleted = false;
 
-            //    foreach (var obj in crd.Spec.Objects)
-            //    {
-            //        if (isCrdCompleted)
-            //            break;
-
-            //        foreach (var copyTo in obj.CopyTo)
-            //        {
-            //            if (isCrdCompleted)
-            //                break;
-
-            //            var resource = new Resource(copyTo.Namespace, copyTo.SecretName);
-            //            var apiResult = await client.InvokeAsync(c => c.ReadNamespacedSecretAsync(resource.Name, resource.Namespace));
-
-            //            if (apiResult.IsSucceeded)
-            //            {
-            //                var currentSyncVersion = Convert.ToInt32(apiResult.Data.GetAnnotation(Constants.SecretSyncVersionAnnotation));
-            //                if (currentSyncVersion == crd.Spec.SyncVersion)
-            //                {
-            //                    _logger.Debug("OnReconciliation : {resource} is exist and syncVersion is same, skipping.", resource);
-            //                }
-            //                else
-            //                {
-            //                    _logger.Information("syncVersion is changed from {old} to {new}, all secrets will be renewed.", crd.Spec.SyncVersion, currentSyncVersion);
-            //                    ServicePrincipalSecretContainer.Flush();
-            //                    _jobRunner.Enqueue(crd);
-
-            //                    //This CRD is enqueued for renewal, its other Objects/CopyTo elements does not need to be processed.
-            //                    isCrdCompleted = true;
-            //                    break;
-            //                }
-            //            }
-            //            else if (apiResult.Status == System.Net.HttpStatusCode.NotFound)
-            //            {
-            //                //Be sure that the entity is not deleted after we start this loop.
-            //                if (_bag.ContainsKey(keyValuePair.Key))
-            //                {
-            //                    _logger.Warning("OnReconciliation : {resource} is not found. It is being created...", resource);
-            //                    _jobRunner.Enqueue(crd);
-
-            //                    //This CRD is enqueued for renewal, its other Objects/CopyTo elements does not need to be processed.
-            //                    isCrdCompleted = true;
-            //                    break;
-            //                }
-            //            }
-            //            else
-            //            {
-            //                _logger.Error(apiResult.Exception, "OnReconciliation : unexpected result for {resource} from kubernetes", resource);
-            //            }
-            //        }
-            //    }
-            //}
-            #endregion
+            if (stopwatch != null)
+            {
+                stopwatch.Stop();
+                _logger.Debug("ReconcileManagedSecrets finished in {elasped} ms", stopwatch.ElapsedMilliseconds);
+            }
         }
 
         public Task OnBookmarked(IKubernetes client, AzureKeyVault crd)
@@ -288,6 +200,7 @@
             _logger.Debug("OnError {@crd}", crd);
             return Task.CompletedTask;
         }
+
 
 
         private Resource GetKey(AzureKeyVault crd) => new Resource(crd.Namespace(), crd.Name());

@@ -30,7 +30,25 @@ kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret
 
 
 ## What is AzureKeyVault custom resource definition ?
-**AzureKeyVault** is a custom resource definition which is being tracked by operator. It is cluster scoped and includes references for Azure KeyVault, service principal and to be synced secrets accross kubernetes cluster.
+**AzureKeyVault** is a cluster scoped custom object which is being tracked by operator.
+Only prerequisite you need to complete is having a kubernetes secret which includes Service Principal (id, secret, tenantid) in any namespace.
+
+In a AzureKeyVault object, you need to define followings;
+| 1st Level Field           | Description                                                                                   |
+|---------------------------|-----------------------------------------------------------------------------------------------|
+| `.spec.syncVersion`    | Version value for providing consistency. You can increment manually if you'd like to sync all of the secrets again. (Optional, default : 1)                                     |
+| `.spec.azureKeyVaultRef`    | Reference of Azure KeyVault which includes secret objects                                     |
+| `.spec.servicePrincipalRef` | Reference of a kubernetes secret object which includes fields of authorized Service Principal |
+| `.spec.managedSecrets`      | List of kubernetes secrets which is being created and filled by operator as your needs.       |
+
+
+### Namespaces field supports regex
+You can define the secrets which you'd like to be created in `.spec.managedSecrets`. If you'd like to create a secret accross more than one namespaces, you can use regex pattern in `.spec.managedSecrets[].namespaces[]'` field as your needs.
+
+### Data field supports Go Template
+Also, `.spec.managedSecrets[].data` field supports **go template** for values. You can put more than one Azure KeyVault Secret data in a field.
+
+Below example demonstrates both of the features.
 
 ```
 apiVersion: btungut.io/v1
@@ -38,31 +56,38 @@ kind: AzureKeyVault
 metadata:
   name: contoso
 spec:
-  name: my-azure-keyvault-name
-  resourceGroup: my-azure-resourcegroup
   syncVersion: 1
-  servicePrincipal:
+  azureKeyVaultRef:
+    name: my-azure-keyvault-name
+    resourceGroup: my-azure-resourcegroup
+  servicePrincipalRef:
     secretName: "my-secret-includes-serviceprincipal"
     secretNamespace: "my-infra-namespace"
     tenantIdField: "tenantid"
     clientIdField: "clientid"
     clientSecretField: "clientsecret"
-  objects:
-    - name: catalog-db-connectionstring
-      type: secret
-      copyTo:
-        - namespace: services-preprod
-          secretName: CatalogDB
-        - namespace: services-staging
-          secretName: CatalogDB
-    - name: catalog-rabbitmq-connectionstring
-      type: secret
-      copyTo:
-        - namespace: services-preprod
-          secretName: RabbitMQ
+  managedSecrets:
+
+    - name: catalog-api-credentials
+      namespaces:
+        - "dev-(.+)"                #namespaces which starts with 'dev-'
+        - "hardcodednamespace"      #specific namespace
+      type: Opaque
+      data:
+        mssql: "{{ .nameOfAzureKeyVaultSecret }}"
+        amqp: "{{ .amqp }};port=15672;TLS=enabled"
+        hardcodedfield: "hard coded value"
+      labels:
+        somelabelkey: "it is possible to adding labels"
+
+    - name: docker-pull-secret
+      namespaces:
+        - "(.+)"                    #match all namespaces
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: "{{ .acr-credentials-json }}"
 ```
 
-`spec.name` and `spec.resourceGroup` needs to point your Azure KeyVault resource.
 
 As we mentioned before, you need to have a service principal that is used to access Azure KeyVault. You need to create a secret **manually** which includes service principal informations. You're completely free for naming of the fields. 
 
@@ -79,59 +104,38 @@ data:
   clientsecret: //BASE64 encoded password
   tenantid: //BASE64 encoded GUID
 ```
-E.g. : Value of `spec.servicePrincipal.clientSecretField` in AzureKeyVault is pointing the field name of secret. 
-
-## Supported Secret Types
-Operator currently supports following types;
-- Opaque
-- kubernetes.io/dockerconfigjson
-
-You can define a secret type with `spec.objects[].copyTo[].secretType` field which is optional and default value is Opaque if it is not explictly defined.
-
-
-```
-apiVersion: btungut.io/v1
-kind: AzureKeyVault
-metadata:
-  name: contoso
-spec:
-  ...
-  ...
-  objects:
-    ...
-    - name: docker-registry-credentials
-      type: secret
-      copyTo:
-        - namespace: services-preprod
-          secretName: registry-credentials
-          secretType: "kubernetes.io/dockerconfigjson"
-```
+E.g. : Value of `spec.servicePrincipalRef.clientSecretField` in AzureKeyVault object is pointing the data field in service principal secret.
 
 ## Configuration
-You can change the configurable values in [values.yaml](https://github.com/btungut/azure-keyvault-secret-operator/blob/master/helm/values.yaml) of helm chart
+You can change or override the configuration values in [values.yaml](https://github.com/btungut/azure-keyvault-secret-operator/blob/master/helm/values.yaml) of helm chart
 
 ```
 ...
 configs:
-  LogLevel: "Information"
-  EnableJsonLogging: "false"
-  ReconciliationFrequency: "00:00:30"
+  logLevel: "Information"
+  enableJsonLogging: "false"
+  reconciliationFrequency: "00:00:30"
 ...
+```
+
+an example which enables json logging and changing log level;
+```
+helm upgrade -i {RELEASE-NAME} btungut/azure-keyvault-secret-operator --set configs.logLevel="Debug" --set configs.enableJsonLogging="true"
 ```
 
 these are defined in [deployment.yaml](https://github.com/btungut/azure-keyvault-secret-operator/blob/master/manifests/03-deployment.yaml) if you're not using helm chart
 
 ```
         env:
-          - name: LogLevel
+          - name: logLevel
             value: "Information"
-          - name: EnableJsonLogging
+          - name: enableJsonLogging
             value: "false"
-          - name: ReconciliationFrequency
+          - name: reconciliationFrequency
             value: "00:00:30"
 ```
 
-- `LogLevel` might be any of Verbose, Debug, Information, Warning, Error, Fatal
-- `EnableJsonLogging` is boolean as string, you can enable it by passing "true" to structured logs.
-- `ReconciliationFrequency` couldn't be less than 10 seconds. More information about reconciliation process will be here soon.
+- `logLevel` might be any of Verbose, Debug, Information, Warning, Error, Fatal
+- `enableJsonLogging` is boolean as string, you can enable it by passing "true" to structured logs.
+- `reconciliationFrequency` couldn't be less than 10 seconds. More information about reconciliation process will be here soon.
 

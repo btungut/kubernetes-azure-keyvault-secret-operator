@@ -23,20 +23,25 @@ spec:
           properties:
             spec:
               type: object
-              required: ["name", "resourceGroup", "servicePrincipal", "objects"]
+              required: ["azureKeyVaultRef", "servicePrincipalRef", "managedSecrets"]
               properties:
-                name:
-                  type: string
-                  description: "Azure KeyVault resource name"
-                resourceGroup:
-                  type: string
-                  description: "Resource group which includes Azure KeyVault"
                 syncVersion:
                   type: integer
                   description: "Optional version value which is being tracked by operator to identify that whether secrets need to be updated or not"
                   minimum: 1
                   default: 1
-                servicePrincipal:
+                azureKeyVaultRef:
+                  type: object
+                  description: "Reference of Azure KeyVault resource"
+                  required: ["name", "resourceGroup"]
+                  properties:
+                    name:
+                      type: string
+                      description: "Azure KeyVault resource name"
+                    resourceGroup:
+                      type: string
+                      description: "Resource group which includes Azure KeyVault"
+                servicePrincipalRef:
                   type: object
                   description: "Authorized service principal which is used against Azure APIs"
                   required: ["secretName", "secretNamespace","tenantIdField", "clientIdField", "clientSecretField"]
@@ -56,46 +61,46 @@ spec:
                     clientSecretField:
                       type: string
                       description: "The data/field name that correspond to Client Secret (password) of service principal"
-                objects:
+
+                managedSecrets:
                   type: array
-                  description: "List of Azure KeyVault contents and Kubernetes secrets which needs to be synced"
+                  description:  "List of the secrets which is created and managed secrets by operator"
                   items:
                     type: object
-                    required: ["name", "type", "copyTo"]
+                    required: ["name", "namespaces", "data"]
                     properties:
                       name:
                         type: string
-                        description: "Name of Azure KeyVault content"
+                        description: "Name of the secret which is created"
+                      namespaces:
+                        type: array
+                        description: "Namespaces regex pattern list of the secret which is created in"
+                        items:
+                          type: string
+                          minimum: 1
                       type:
                         type: string
-                        description: "Type of Azure KeyVault content (secret,certificate or key)"
-                        pattern: "(^secret$)|(^certificate$)|(^key$)"
-                      copyTo:
-                        type: array
-                        description: "List of kubernetes secrets which is created with referenced Azure KeyVault contents"
-                        items:
-                          type: object
-                          required: ["namespace", "secretName"]
-                          properties:
-                            namespace:
-                              type: string
-                              description: "Namespace of to be created secret"
-                            secretName:
-                              type: string
-                              description: "Name of to be created secret"
-                            secretType:
-                              type: string
-                              description: "Type of to be created secret (default : Opaque)"
-                              pattern: "(^[Oo]paque$)|(^kubernetes.io/(service-account-token|dockercfg|dockerconfigjson|basic-auth|ssh-auth|tls)$)|(^bootstrap.kubernetes.io/token$)"
-                              default: "Opaque"
+                        description: "Type of to secret (default : Opaque)"
+                        pattern: "(^[Oo]paque$)|(^kubernetes.io/(service-account-token|dockercfg|dockerconfigjson|basic-auth|ssh-auth|tls)$)|(^bootstrap.kubernetes.io/token$)"
+                        default: "Opaque"
+                      data:
+                        type: object
+                        minimum: 1
+                        additionalProperties:
+                          type: string
+                      labels:
+                        type: object
+                        additionalProperties:
+                          type: string
+                       
       additionalPrinterColumns:
         - name: "syncVersion"
           jsonPath: .spec.syncVersion
           type: integer
         - name: "serviceprincipal-secret-namespace"
-          jsonPath: .spec.servicePrincipal.secretNamespace
+          jsonPath: .spec.servicePrincipalRef.secretNamespace
           type: string
         - name: "serviceprincipal-secret-name"
-          jsonPath: .spec.servicePrincipal.secretName
+          jsonPath: .spec.servicePrincipalRef.secretName
           type: string
 

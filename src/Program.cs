@@ -5,7 +5,6 @@ using System.Diagnostics;
 
 namespace Operator
 {
-    //TODO: status
     public class Program
     {
         internal static AppConfiguration AppConfiguration;

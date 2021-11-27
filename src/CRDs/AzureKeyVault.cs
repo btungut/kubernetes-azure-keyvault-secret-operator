@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Operator.CRDs
+﻿namespace Operator.CRDs
 {
     public class AzureKeyVault : CRDBase
     {
@@ -12,15 +6,14 @@ namespace Operator.CRDs
 
         public class AzureKeyVaultSpec
         {
-            public string Name { get; set; }
-            public string ResourceGroup { get; set; }
             public int SyncVersion { get; set; }
+            public AzureKeyVaultRefDefinition AzureKeyVaultRef { get; set; }
 
-            public ServicePrincipalConfiguration ServicePrincipal { get; set; }
+            public ServicePrincipalRefDefinition ServicePrincipalRef { get; set; }
 
-            public List<ToBeFetchedObjects> Objects { get; set; }
+            public List<ManagedSecretsDefinition> ManagedSecrets { get; set; }
 
-            public class ServicePrincipalConfiguration
+            public class ServicePrincipalRefDefinition
             {
                 public string SecretName { get; set; }
                 public string SecretNamespace { get; set; }
@@ -29,27 +22,19 @@ namespace Operator.CRDs
                 public string TenantIdField { get; set; }
             }
 
-            public class ToBeFetchedObjects
+            public class ManagedSecretsDefinition
             {
                 public string Name { get; set; }
-                public ObjectType Type { get; set; }
+                public string[] Namespaces { get; set; }
+                public string Type { get; set; }
+                public IDictionary<string, string> Data { get; set; }
+                public IDictionary<string, string> Labels { get; set; }
+            }
 
-                public List<CopyToNamespace> CopyTo { get; set; }
-
-
-                public enum ObjectType
-                {
-                    Key,
-                    Secret,
-                    Certificate
-                }
-
-                public class CopyToNamespace
-                {
-                    public string Namespace { get; set; }
-                    public string SecretName { get; set; }
-                    public string SecretType { get; set; }
-                }
+            public class AzureKeyVaultRefDefinition
+            {
+                public string Name { get; set; }
+                public string ResourceGroup { get; set; }
             }
         }
     }

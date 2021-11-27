@@ -19,14 +19,19 @@ spec:
       restartPolicy: Always
       containers:
       - name: operator
-        image: btungut/azure-keyvault-secret-operator:0.0.1
+        image: btungut/azure-keyvault-secret-operator:0.0.3
         env:
-          - name: LogLevel
-            value: "Information" # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)
-          - name: EnableJsonLogging
-            value: "false" # valid values : true, false (default : false) 
-          - name: ReconciliationFrequency
-            value: "00:00:30" # hh:mm:ss
+          # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)
+          - name: logLevel
+            value: "Information" 
+          
+          # valid values : true, false (default : false) 
+          - name: enableJsonLogging
+            value: "false"
+
+          # hh:mm:ss
+          - name: reconciliationFrequency
+            value: "00:00:30"
         resources:
           limits:
             memory: "128Mi"

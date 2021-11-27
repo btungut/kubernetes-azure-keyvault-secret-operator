@@ -3,12 +3,15 @@ fullnameOverride: ""
 
 image:
   repository: btungut/azure-keyvault-secret-operator
-  tag: 0.0.1
+  tag: 0.0.3
 
 configs:
-  LogLevel: "Information"             # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)
-  EnableJsonLogging: "false"          # valid values: true, false as string
-  ReconciliationFrequency: "00:00:30" # timespan hh:mm:ss
+  # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)
+  logLevel: "Information"
+  # valid values: true, false as string
+  enableJsonLogging: "false"
+  # timespan hh:mm:ss
+  reconciliationFrequency: "00:00:30"
 
 rbac:
   enabled: true

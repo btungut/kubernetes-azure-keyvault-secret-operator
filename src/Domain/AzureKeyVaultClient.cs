@@ -21,7 +21,7 @@ namespace Operator.Domain
             var opt = new SecretClientOptions();
             opt.Retry.NetworkTimeout = TimeSpan.FromSeconds(5);
             _secretClient = new SecretClient(_uri, cred, opt);
-
+            
             _retryPolicy = Policy
                 .Handle<Azure.RequestFailedException>(o => o.Status >= 500)
                 .OrInner<Azure.RequestFailedException>(o => o.Status >= 500)

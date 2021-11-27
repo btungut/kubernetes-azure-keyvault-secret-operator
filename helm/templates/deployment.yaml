@@ -28,12 +28,12 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: IfNotPresent
           env:
-            - name: LogLevel
-              value: {{ .Values.configs.LogLevel | quote }}
-            - name: EnableJsonLogging
-              value: {{ .Values.configs.EnableJsonLogging | quote }}
-            - name: ReconciliationFrequency
-              value: {{ .Values.configs.ReconciliationFrequency | quote }}
+            - name: logLevel
+              value: {{ .Values.configs.logLevel | quote }}
+            - name: enableJsonLogging
+              value: {{ .Values.configs.enableJsonLogging | quote }}
+            - name: reconciliationFrequency
+              value: {{ .Values.configs.reconciliationFrequency | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

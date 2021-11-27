@@ -1,4 +1,6 @@
-﻿namespace OperatorFramework
+﻿using System.Diagnostics;
+
+namespace OperatorFramework
 {
     internal class CRDWatcher<T> where T : CRDBase
     {
@@ -20,23 +22,35 @@
         {
             _logger.Information("CRD watcher for {name} is starting. Operator may wait a while if there is no object in cluster.", $"{_configuration.Plural}.{_configuration.Group}");
             var response = await Client.ListClusterCustomObjectWithHttpMessagesAsync(_configuration.Group, _configuration.Version, _configuration.Plural, watch: true);
-            _watcher = response.Watch<T, object>(async (_eventType, _crd) => await OnChange(_eventType, _crd), OnError, OnClosed);
+            _watcher = response.Watch<T, object>(async (_eventType, _crd) => await OnChange(_eventType, _crd).ConfigureAwait(false), OnError, OnClosed);
 
             await Task.Factory.StartNew(async () =>
             {
+                Stopwatch stopwatch = new Stopwatch();
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    await Task.Delay(_configuration.ReconciliationFrequency);
+                    TimeSpan delay = _configuration.ReconciliationFrequency.Subtract(stopwatch.Elapsed);
+
+                    if (delay.TotalSeconds >= 1.0)
+                        await Task.Delay(delay).ConfigureAwait(false);
+                    else
+                        _logger.Warning("ATTENTION! Last reconciliation {elapsed} took more than its frequency {frequency}. Please check the resources you assigned to operator. Low CPU, low frequency value or high secret load may lead this problem.", stopwatch.Elapsed, _configuration.ReconciliationFrequency);
 
                     try
                     {
-                        await _eventHandler.OnReconciliation(Client);
+                        stopwatch.Restart();
+                        await _eventHandler.OnReconciliation(Client).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
                         LoggerFactory.GetLogger(_eventHandler.GetType())
                             .Error(e, "OnReconciliation is failed");
                     }
+                    finally
+                    {
+                        stopwatch.Stop();
+                    }
+
                 }
             }, TaskCreationOptions.LongRunning).Unwrap();
         }
@@ -75,13 +89,13 @@
 
         private void OnError(Exception exception)
         {
-            _logger.Fatal(exception, "Watcher has been failed");
+            _logger.Fatal(exception, "Watcher has been failed, operator will be restarted.");
             Environment.Exit(-1);
         }
 
         private void OnClosed()
         {
-            _logger.Fatal("Watcher has been closed");
+            _logger.Fatal("Watcher has been closed, operator will be restarted.");
             Environment.Exit(-1);
         }
 
@@ -92,7 +106,6 @@
 
             if (eventHandlerCreator == null)
                 throw new ArgumentNullException(nameof(eventHandlerCreator));
-
 
             await ValidateAsync(Program.KubernetesClient, configuration);
             return new CRDWatcher<T>(eventHandlerCreator, Program.KubernetesClient, configuration);
