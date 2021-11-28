@@ -34,6 +34,7 @@ kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret
 Only prerequisite you need to complete is having a kubernetes secret which includes Service Principal (id, secret, tenantid) in any namespace.
 
 In a AzureKeyVault object, you need to define followings;
+
 | 1st Level Field             | Description                                                                                                                                |
 |:----------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------|
 | `.spec.syncVersion`         | Version value for providing consistency. You can increment manually if you'd like to sync all of the secrets again. (Optional, default : 1)|
