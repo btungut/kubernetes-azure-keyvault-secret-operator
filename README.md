@@ -34,12 +34,12 @@ kubectl apply -f https://raw.githubusercontent.com/btungut/azure-keyvault-secret
 Only prerequisite you need to complete is having a kubernetes secret which includes Service Principal (id, secret, tenantid) in any namespace.
 
 In a AzureKeyVault object, you need to define followings;
-| 1st Level Field           | Description                                                                                   |
-|---------------------------|-----------------------------------------------------------------------------------------------|
-| `.spec.syncVersion`    | Version value for providing consistency. You can increment manually if you'd like to sync all of the secrets again. (Optional, default : 1)                                     |
-| `.spec.azureKeyVaultRef`    | Reference of Azure KeyVault which includes secret objects                                     |
-| `.spec.servicePrincipalRef` | Reference of a kubernetes secret object which includes fields of authorized Service Principal |
-| `.spec.managedSecrets`      | List of kubernetes secrets which is being created and filled by operator as your needs.       |
+| 1st Level Field             | Description                                                                                                                                |
+|:----------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------|
+| `.spec.syncVersion`         | Version value for providing consistency. You can increment manually if you'd like to sync all of the secrets again. (Optional, default : 1)|
+| `.spec.azureKeyVaultRef`    | Reference of Azure KeyVault which includes secret objects                                                                                  |
+| `.spec.servicePrincipalRef` | Reference of a kubernetes secret object which includes fields of authorized Service Principal                                              |
+| `.spec.managedSecrets`      | List of kubernetes secrets which is being created and filled by operator as your needs.                                                    |
 
 
 ### Namespaces field supports regex
