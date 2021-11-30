@@ -89,17 +89,23 @@ namespace Operator.Domain.Jobs
             }
         }
 
+        static readonly string[] JsonPathPatterns = { @"\$\.([a-zA-Z0-9]*)", @"\$\['([a-zA-Z0-9-_]*)']" };
         private async Task<Dictionary<string, byte[]>> PopulateDataDictionaryAsync(IDictionary<string, string> requestedData, AzureKeyVaultClient kvClient)
         {
-            const string pattern = @"{{\s*\.([a-zA-Z0-9._-]*)\s*}}";
-
             var data = new Dictionary<string, byte[]>();
             foreach (var req in requestedData)
             {
                 string value;
 
-                var matches = Regex.Matches(req.Value, pattern);
-                if (matches.Count == 0)
+                var matches = JsonPathPatterns.SelectMany(pattern => Regex.Matches(req.Value, pattern)).ToArray();
+
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug) && matches.Length > 0)
+                {
+                    var logObject = matches.Select(match => $"{match.Value} --> {match.Groups[1]}");
+                    _logger.Debug("Matching results for {key} : {obj}", req.Key, logObject);
+                }
+
+                if (matches.Length == 0)
                 {
                     _logger.Debug("{key} is hardcoded", req.Key);
                     value = req.Value;
