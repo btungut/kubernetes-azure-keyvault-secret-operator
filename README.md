@@ -1,5 +1,5 @@
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/azure-keyvault-secret-operator)](https://artifacthub.io/packages/search?repo=azure-keyvault-secret-operator)
-[![Release](https://img.shields.io/github/v/release/btungut/azure-keyvault-secret-operator?include_prereleases&style=plastic)](https://github.com/btungut/azure-keyvault-secret-operator/releases/tag/0.0.3)
+[![Release](https://img.shields.io/github/v/release/btungut/azure-keyvault-secret-operator?include_prereleases&style=plastic)](https://github.com/btungut/azure-keyvault-secret-operator/releases/tag/0.0.4)
 [![LICENSE](https://img.shields.io/github/license/btungut/azure-keyvault-secret-operator?style=plastic)](https://github.com/btungut/azure-keyvault-secret-operator/blob/master/LICENSE)
 
 # Azure KeyVault Secret Operator
@@ -45,8 +45,8 @@ In a AzureKeyVault object, you need to define followings;
 ### Namespaces field supports regex
 You can define the secrets which you'd like to be created in `.spec.managedSecrets`. If you'd like to create a secret accross more than one namespaces, you can use regex pattern in `.spec.managedSecrets[].namespaces[]'` field as your needs.
 
-### Data field supports Go Template
-Also, `.spec.managedSecrets[].data` field supports **go template** for values. You can put more than one Azure KeyVault Secret data in a field.
+### Data field supports Json Path
+Also, `.spec.managedSecrets[].data` field supports **json path** for values. You can put more than one Azure KeyVault Secret data in a field.
 
 Below example demonstrates both of the features.
 
@@ -74,8 +74,8 @@ spec:
         - "hardcodednamespace"      #specific namespace
       type: Opaque
       data:
-        mssql: "{{ .nameOfAzureKeyVaultSecret }}"
-        amqp: "{{ .amqp }};port=15672;TLS=enabled"
+        mssql: "$['nameOfAzureKeyVaultSecret']"
+        amqp: "$['amqp'];port=15672;TLS=enabled"
         hardcodedfield: "hard coded value"
       labels:
         somelabelkey: "it is possible to adding labels"
@@ -85,7 +85,7 @@ spec:
         - "(.+)"                    #match all namespaces
       type: kubernetes.io/dockerconfigjson
       data:
-        .dockerconfigjson: "{{ .acr-credentials-json }}"
+        .dockerconfigjson: "$['acr-credentials-json']"
 ```
 
 

@@ -2,8 +2,8 @@ apiVersion: v2
 name: azure-keyvault-secret-operator
 description: Kubernetes operator which enables your cluster to sync secrets with Azure KeyVault in easiest way.
 type: application
-version: 0.0.3
-appVersion: "0.0.3"
+version: 0.0.4
+appVersion: "0.0.4"
 sources:
   - https://github.com/btungut/azure-keyvault-secret-operator
 home: https://github.com/btungut/azure-keyvault-secret-operator
