@@ -1,0 +1,21 @@
+- title: Quick Guide
+  url: "quick-guide"
+  links:
+    - title: "Deployment"
+      url: "quick-guide#deployment"
+    - title: "AzureKeyVault custom object?"
+      url: "quick-guide#what-is-azurekeyvault-custom-object-"
+
+- title: Example Use Case
+  url: "example-use-case"
+  links:
+    - title: "Step 1 : Preparing Azure Resources"
+      url: "example-use-case/01-preparing-azure-resources"
+    - title: "Step 2 : Preparing Service Principal"
+      url: "example-use-case/02-preparing-service-principal"
+    - title: "Step 3 : Deploying Operator"
+      url: "example-use-case/03-deploying-operator"
+    - title: "Step 4 : Creating AzureKeyVault Object"
+      url: "example-use-case/04-creating-azurekeyvault-custom-object"
+    - title: "Review"
+      url: "example-use-case/05-review"
