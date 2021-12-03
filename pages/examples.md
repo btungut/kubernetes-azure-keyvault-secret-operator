@@ -55,23 +55,23 @@ data:
 <div class="section-index">
     <hr class="panel-line">
     <div class="entry">
-      <h5><a href="01-preparing-azure-resources">Step 1 : Preparing Azure Resources</a></h5>
+      <h5><a href="{{ '/example-use-case/01-preparing-azure-resources' | prepend: site.baseurl }}">Step 1 : Preparing Azure Resources</a></h5>
       <p></p>
     </div>
     <div class="entry">
-      <h5><a href="02-preparing-service-principal">Step 2 : Preparing Service Principal</a></h5>
+      <h5><a href="{{ '/example-use-case/02-preparing-service-principal' | prepend: site.baseurl }}">Step 2 : Preparing Service Principal</a></h5>
       <p></p>
     </div>
     <div class="entry">
-      <h5><a href="03-deploying-operator">Step 3 : Deploying Operator</a></h5>
+      <h5><a href="{{ '/example-use-case/03-deploying-operator' | prepend: site.baseurl }}">Step 3 : Deploying Operator</a></h5>
       <p></p>
     </div>
     <div class="entry">
-      <h5><a href="04-creating-azurekeyvault-custom-object">Step 4 : Creating AzureKeyVault Object</a></h5>
+      <h5><a href="{{ '/example-use-case/04-creating-azurekeyvault-custom-object' | prepend: site.baseurl }}">Step 4 : Creating AzureKeyVault Object</a></h5>
       <p></p>
     </div>
     <div class="entry">
-      <h5><a href="05-review">Step 5 : Review</a></h5>
+      <h5><a href="{{ '/example-use-case/05-review' | prepend: site.baseurl }}">Step 5 : Review</a></h5>
       <p></p>
     </div>
 </div>
