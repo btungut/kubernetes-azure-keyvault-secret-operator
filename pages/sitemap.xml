@@ -12,7 +12,7 @@ permalink: /sitemap.xml
     </url>
 {% for section in site.data.toc %}
     <url>
-        <loc>{{ site.url }}{{ site.baseurl }}/{{ section.url }}/</loc>
+        <loc>{{ site.url }}{{ site.baseurl }}/{{ section.url }}</loc>
         <lastmod>{{ "now" | date: "%Y-%m-%d" }}</lastmod>
         <changefreq>daily</changefreq>
     </url>
@@ -20,7 +20,7 @@ permalink: /sitemap.xml
     {% if subSection.url contains "#"  %}
     {% else %}
     <url>
-        <loc>{{ site.url }}{{ site.baseurl }}/{{ subSection.url }}/</loc>
+        <loc>{{ site.url }}{{ site.baseurl }}/{{ subSection.url }}</loc>
         <lastmod>{{ "now" | date: "%Y-%m-%d" }}</lastmod>
         <changefreq>daily</changefreq>
     </url>
