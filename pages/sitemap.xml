@@ -10,10 +10,17 @@ permalink: /sitemap.xml
      <lastmod>{{ "now" | date: "%Y-%m-%d" }}</lastmod>
      <changefreq>daily</changefreq>
     </url>
-{% for section in site.data.toc %}<url>
-     <loc>{{ site.baseurl }}{{ section.url }}/</loc>
+{% for section in site.data.toc %}
+    <url>
+     <loc>{{ site.baseurl }}/{{ section.url }}/</loc>
      <lastmod>{{ "now" | date: "%Y-%m-%d" }}</lastmod>
      <changefreq>daily</changefreq>
     </url>
+{% for subSection in section.links %}
+    <url>
+    <loc>{{ site.baseurl }}/{{ subSection.url }}/</loc>
+    <lastmod>{{ "now" | date: "%Y-%m-%d" }}</lastmod>
+    <changefreq>daily</changefreq>
+   </url>
 {% endfor %}
 </urlset>
