@@ -17,7 +17,7 @@ permalink: /sitemap.xml
         <changefreq>daily</changefreq>
     </url>
 {% for subSection in section.links %}
-    {% if (subSection.url contains '#' ) %}
+    {% if subSection.url contains "#"  %}
     {% else %}
     <url>
         <loc>{{ site.baseurl }}/{{ subSection.url }}/</loc>
