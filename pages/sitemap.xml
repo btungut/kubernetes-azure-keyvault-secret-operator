@@ -23,4 +23,5 @@ permalink: /sitemap.xml
     <changefreq>daily</changefreq>
    </url>
 {% endfor %}
+{% endfor %}
 </urlset>
