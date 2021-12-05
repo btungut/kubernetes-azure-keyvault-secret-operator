@@ -1,3 +1,7 @@
+---
+layout: null
+permalink: /robots.txt
+---
 User-agent: *
 Disallow: 
 Sitemap: https://btungut.github.io/kubernetes-azure-keyvault-secret-operator/sitemap.xml
