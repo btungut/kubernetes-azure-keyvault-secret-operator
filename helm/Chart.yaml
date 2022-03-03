@@ -1,12 +1,12 @@
 apiVersion: v2
-name: azure-keyvault-secret-operator
+name: kubernetes-azure-keyvault-secret-operator
 description: Kubernetes Azure KeyVault Secret Operator
 type: application
 version: 0.0.5
 appVersion: "0.0.5"
 sources:
-  - https://github.com/btungut/azure-keyvault-secret-operator
-home: https://github.com/btungut/azure-keyvault-secret-operator
+  - https://github.com/btungut/kubernetes-azure-keyvault-secret-operator
+home: https://github.com/btungut/kubernetes-azure-keyvault-secret-operator
 maintainers:
   - name: Burak Tungut
     email: buraktungut@gmail.com
@@ -16,7 +16,7 @@ annotations:
   artifacthub.io/license: MIT
   artifacthub.io/links: |
     - name: GitHub
-      url: https://github.com/btungut/azure-keyvault-secret-operator
+      url: https://github.com/btungut/kubernetes-azure-keyvault-secret-operator
   artifacthub.io/operator: "true"
   artifacthub.io/operatorCapabilities: Seamless Upgrades
   artifacthub.io/crds: |
