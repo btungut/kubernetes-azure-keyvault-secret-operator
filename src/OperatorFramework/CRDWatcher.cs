@@ -8,7 +8,9 @@ namespace OperatorFramework
 
         private readonly ICRDEventHandler<T> _eventHandler;
         private readonly CRDConfiguration _configuration;
+        private readonly IAsyncPolicy _retryPolicy;
         private Watcher<T> _watcher;
+        private SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         private static readonly ILogger _logger = LoggerFactory.GetLogger<CRDWatcher<T>>();
 
         public CRDWatcher(Func<ICRDEventHandler<T>> eventHandlerCreator, IKubernetes client, CRDConfiguration configuration)
@@ -16,13 +18,23 @@ namespace OperatorFramework
             Client = client;
             _configuration = configuration;
             _eventHandler = eventHandlerCreator();
+            _retryPolicy = Policy
+                .Handle<Exception>()
+                .WaitAndRetryAsync(10, (attempt) => TimeSpan.FromMilliseconds(attempt * 100), (e, ts, attempt, context) =>
+                {
+                    _logger.Error(e,
+                        "{operation} is failed. Attempt : {attempt}. Delay : {delay} ms",
+                        context.OperationKey,
+                        attempt,
+                        ts.TotalMilliseconds);
+                });
         }
 
         public async Task HandleAsync(CancellationToken cancellationToken)
         {
             _logger.Information("CRD watcher for {name} is starting. Operator may wait a while if there is no object in cluster.", $"{_configuration.Plural}.{_configuration.Group}");
-            var response = await Client.ListClusterCustomObjectWithHttpMessagesAsync(_configuration.Group, _configuration.Version, _configuration.Plural, watch: true);
-            _watcher = response.Watch<T, object>(async (_eventType, _crd) => await OnChange(_eventType, _crd).ConfigureAwait(false), OnError, OnClosed);
+
+            await StartWatcherAsync();
 
             await Task.Factory.StartNew(async () =>
             {
@@ -53,6 +65,19 @@ namespace OperatorFramework
 
                 }
             }, TaskCreationOptions.LongRunning).Unwrap();
+        }
+
+        private async Task StartWatcherAsync()
+        {
+            _logger.Debug("Watcher object is initiating...");
+
+            var response = await Client.ListClusterCustomObjectWithHttpMessagesAsync(_configuration.Group, _configuration.Version, _configuration.Plural, watch: true);
+            _watcher = response.Watch<T, object>(
+                onEvent: async (_eventType, _crd) => await OnChange(_eventType, _crd).ConfigureAwait(false),
+                onClosed: async () => await OnClosed().ConfigureAwait(false));
+
+            _logger.Debug("Watcher object is initiated.");
+
         }
 
         private async Task OnChange(WatchEventType eventType, T crd)
@@ -87,16 +112,35 @@ namespace OperatorFramework
             }
         }
 
-        private void OnError(Exception exception)
+        private async Task OnClosed()
         {
-            _logger.Fatal(exception, "Watcher has been failed, operator will be restarted.");
-            Environment.Exit(-1);
-        }
+            await _semaphore.WaitAsync();
+            try
+            {
+                _logger.Warning("Kubernetes Watch API was closed. Restarting...");
 
-        private void OnClosed()
-        {
-            _logger.Fatal("Watcher has been closed, operator will be restarted.");
-            Environment.Exit(-1);
+                await _retryPolicy.ExecuteAsync(async (_context) =>
+                {
+
+                    _logger.Debug("Watcher object is disposing...");
+                    _watcher.Dispose();
+                    _watcher = null;
+                    _logger.Debug("Watcher object is disposed.");
+
+                    await StartWatcherAsync();
+                }, new Context("Watch API restarting"));
+
+                _logger.Information("Watch API is restarted.");
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, "OnClosed() is failed!");
+                throw;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         public static async Task<CRDWatcher<T>> CreateAsync(Func<ICRDEventHandler<T>> eventHandlerCreator, CRDConfiguration configuration)
