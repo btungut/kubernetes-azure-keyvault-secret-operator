@@ -19,7 +19,7 @@ spec:
       restartPolicy: Always
       containers:
       - name: operator
-        image: btungut/azure-keyvault-secret-operator:0.0.4
+        image: btungut/azure-keyvault-secret-operator:0.0.5
         env:
           # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)
           - name: logLevel
@@ -35,5 +35,5 @@ spec:
         resources:
           limits:
             memory: "128Mi"
-            cpu: "500m"
+            cpu: "100m"
 

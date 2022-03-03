@@ -3,7 +3,7 @@ fullnameOverride: ""
 
 image:
   repository: btungut/azure-keyvault-secret-operator
-  tag: 0.0.4
+  tag: 0.0.5
 
 configs:
   # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)
@@ -18,11 +18,8 @@ rbac:
 
 resources:
   limits:
-    cpu: 500m
-    memory: 128Mi
-  requests:
     cpu: 100m
-    memory: 64Mi
+    memory: 128Mi
 
 imagePullSecrets: []
 nodeSelector: {}
