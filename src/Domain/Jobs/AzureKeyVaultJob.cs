@@ -96,6 +96,7 @@ namespace Operator.Domain.Jobs
             foreach (var req in requestedData)
             {
                 string value;
+                bool isBase64Encoded = false;
 
                 var matches = JsonPathPatterns.SelectMany(pattern => Regex.Matches(req.Value, pattern)).ToArray();
 
@@ -118,22 +119,29 @@ namespace Operator.Domain.Jobs
                         var secretName = match.Groups[1].Value;
                         _logger.Debug("Azure KeyVault will be called for {secret}", secretName);
 
-                        var secretValue = await kvClient.GetSecretAsync(secretName);
+                        var azureKeyVaultSecret = await kvClient.GetSecretAsync(secretName);
 
                         //If any value couldn't be fetched from Azure, skip this secret directly, return null!
-                        if (!secretValue.IsSucceeded)
+                        if (!azureKeyVaultSecret.IsSucceeded)
                         {
-                            _logger.Warning(secretValue.Exception, "Azure KeyVault request is not succeeded for {secret}", secretName);
+                            _logger.Warning(azureKeyVaultSecret.Exception, "Azure KeyVault request is not succeeded for {secret}", secretName);
                             return null;
                         }
 
-                        builder.Replace(match.Groups[0].Value, secretValue.Data);
+                        builder.Replace(match.Groups[0].Value, azureKeyVaultSecret.Data.Value);
+
+                        if (azureKeyVaultSecret.Data?.Properties?.Tags != null &&
+                            azureKeyVaultSecret.Data.Properties.Tags.TryGetValue("file-encoding", out string encoding) && 
+                            encoding.Equals("base64", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            isBase64Encoded = true;
+                        }
                     }
 
                     value = builder.ToString();
                 }
 
-                data.Add(req.Key, Encoding.UTF8.GetBytes(value));
+                data.Add(req.Key, isBase64Encoded ? Convert.FromBase64String(value) : Encoding.UTF8.GetBytes(value));
             }
 
             return data;

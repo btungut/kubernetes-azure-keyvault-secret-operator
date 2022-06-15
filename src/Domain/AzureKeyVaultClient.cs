@@ -63,25 +63,25 @@ namespace Operator.Domain
             return _clients.GetOrAdd(key, (_) => new AzureKeyVaultClient(keyVaultName, tenantId, clientId, clientSecret));
         }
 
-        public async Task<Result<string>> GetSecretAsync(string secretName)
+        public async Task<Result<KeyVaultSecret>> GetSecretAsync(string secretName)
         {
             try
             {
                 return await _wrappedPolicy.ExecuteAsync(async () =>
                 {
                     var response = await _secretClient.GetSecretAsync(secretName);
-                    return new Result<string>(response.Value.Value);
+                    return new Result<KeyVaultSecret>(response.Value);
                 });
             }
             catch (Polly.CircuitBreaker.BrokenCircuitException e)
             {
                 _logger.Error("Circuit breaker is in open state");
-                return new Result<string>(e);
+                return new Result<KeyVaultSecret>(e);
             }
             catch (Exception e)
             {
                 _logger.Error(e, "GetSecretAsync : Azure response is not succeeded for {name}", secretName);
-                return new Result<string>(e);
+                return new Result<KeyVaultSecret>(e);
             }
         }
     }
