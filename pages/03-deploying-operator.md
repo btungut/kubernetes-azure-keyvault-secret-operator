@@ -12,7 +12,7 @@ There are two ways to deploy operator into a kubernetes cluster. In this example
 
 ```bash
 helm repo add btungut https://btungut.github.io
-helm upgrade -i azure-keyvault-secret-operator btungut/azure-keyvault-secret-operator --set configs.logLevel="Debug" --namespace default
+helm upgrade -i azure-keyvault-secret-operator btungut/kubernetes-azure-keyvault-secret-operator --set configs.logLevel="Debug" --namespace default
 ```
 
 

@@ -15,7 +15,7 @@ Helm chart supports RBAC and CRD manifests installation. You can pass `--set rba
 
 ```bash
 helm repo add btungut https://btungut.github.io
-helm upgrade -i {RELEASE-NAME} btungut/azure-keyvault-secret-operator
+helm upgrade -i {RELEASE-NAME} btungut/kubernetes-azure-keyvault-secret-operator
 ```
 
 
