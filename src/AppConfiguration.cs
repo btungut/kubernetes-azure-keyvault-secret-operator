@@ -9,5 +9,6 @@ namespace Operator
 
         public int WorkerCount { get; private set; } = 1;
         public TimeSpan ReconciliationFrequency { get; set; } = TimeSpan.FromSeconds(30);
+        public TimeSpan? ForceUpdateFrequency { get; set; } = null;
     }
 }

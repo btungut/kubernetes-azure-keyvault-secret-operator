@@ -8,10 +8,17 @@ image:
 configs:
   # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)
   logLevel: "Information"
+  
   # valid values: true, false as string
   enableJsonLogging: "false"
+  
   # timespan hh:mm:ss
   reconciliationFrequency: "00:00:30"
+
+  # timespan (nullable) hh:mm:ss
+  # It forces to update all secrets in specified timespan.
+  forceUpdateFrequency: "00:03:00"
+
 
 rbac:
   enabled: true

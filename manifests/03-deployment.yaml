@@ -32,6 +32,9 @@ spec:
           # hh:mm:ss
           - name: reconciliationFrequency
             value: "00:00:30"
+
+          - name: forceUpdateFrequency
+            value: "00:03:00"
         resources:
           limits:
             memory: "128Mi"
