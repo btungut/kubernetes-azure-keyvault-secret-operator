@@ -55,8 +55,8 @@ namespace Operator
                 config = KubernetesClientConfiguration.BuildConfigFromConfigFile();
             }
             
+            config.HttpClientTimeout = TimeSpan.FromSeconds(10);
             KubernetesClient = new Kubernetes(config);
-            KubernetesClient.HttpClient.Timeout = TimeSpan.FromSeconds(10);
         }
 
         private static void Bootstrap()
@@ -74,6 +74,9 @@ namespace Operator
             //Validation
             if (AppConfiguration.ReconciliationFrequency < TimeSpan.FromSeconds(10))
                 throw new ArgumentOutOfRangeException(nameof(AppConfiguration.ReconciliationFrequency), "ReconciliationFrequency couldn't be less than 10 seconds.");
+
+            if (AppConfiguration.ForceUpdateFrequency.HasValue && AppConfiguration.ForceUpdateFrequency.Value < TimeSpan.FromSeconds(30))
+                throw new ArgumentOutOfRangeException(nameof(AppConfiguration.ForceUpdateFrequency), "ForceUpdateFrequency couldn't be less than 30 seconds.");
         }
 
         private static void ConfigureLogging()

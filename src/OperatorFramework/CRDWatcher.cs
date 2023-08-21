@@ -71,7 +71,7 @@ namespace OperatorFramework
         {
             _logger.Debug("Watcher object is initiating...");
 
-            var response = await Client.ListClusterCustomObjectWithHttpMessagesAsync(_configuration.Group, _configuration.Version, _configuration.Plural, watch: true);
+            var response = await Client.CustomObjects.ListClusterCustomObjectWithHttpMessagesAsync(_configuration.Group, _configuration.Version, _configuration.Plural, watch: true);
             _watcher = response.Watch<T, object>(
                 onEvent: async (_eventType, _crd) => await OnChange(_eventType, _crd).ConfigureAwait(false),
                 onClosed: async () => await OnClosed().ConfigureAwait(false));
@@ -160,7 +160,7 @@ namespace OperatorFramework
             string crdName = $"{configuration.Plural}.{configuration.Group}";
             _logger.Information("Checking CRD {name}", crdName);
 
-            var apiResult = await client.InvokeAsync(c => c.ReadCustomResourceDefinitionAsync(crdName));
+            var apiResult = await client.InvokeAsync(c => c.ApiextensionsV1.ReadCustomResourceDefinitionAsync(crdName));
             if (!apiResult.IsSucceeded)
             {
                 _logger.Error(apiResult.Exception, "CRD is not found!");

@@ -34,6 +34,10 @@ spec:
               value: {{ .Values.configs.enableJsonLogging | quote }}
             - name: reconciliationFrequency
               value: {{ .Values.configs.reconciliationFrequency | quote }}
+            {{- if and (hasKey .Values.configs "forceUpdateFrequency") (.Values.configs.forceUpdateFrequency) }}
+            - name: forceUpdateFrequency
+              value: {{ .Values.configs.forceUpdateFrequency | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

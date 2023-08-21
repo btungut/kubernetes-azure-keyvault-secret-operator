@@ -2,6 +2,7 @@
 {
     internal class JobRuner<TJobParameter>
     {
+        public DateTime? LastExecutedAt { get; private set; }
         private ILogger _logger = LoggerFactory.GetLogger<JobRuner<TJobParameter>>();
         private BlockingCollection<TJobParameter> _queue;
         private Task[] _tasks;
@@ -30,7 +31,11 @@
             }
         }
 
-        public void Enqueue(TJobParameter jobParameter) => _queue.Add(jobParameter);
+        public void Enqueue(TJobParameter jobParameter)
+        {
+            LastExecutedAt = DateTime.UtcNow;
+            _queue.Add(jobParameter);
+        }
     }
 
     internal abstract class Job<TJobParameter>

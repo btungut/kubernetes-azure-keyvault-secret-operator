@@ -56,7 +56,7 @@ namespace Operator.Handlers
 
             _logger.Information("OnReconciliation is starting");
 
-            var clusterNamespaces = (await client.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
+            var clusterNamespaces = (await client.CoreV1.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
             await ReconcileManagedSecrets(bag, client, clusterNamespaces);
             await ReconcileDanglingSecrets(bag, client, clusterNamespaces);
 
@@ -72,7 +72,7 @@ namespace Operator.Handlers
 
             foreach (var ns in clusterNamespaces)
             {
-                var secrets = await client.ListNamespacedSecretAsync(ns, labelSelector: $"{Constants.SecretLabelKey}={Constants.SecretLabelValue}");
+                var secrets = await client.CoreV1.ListNamespacedSecretAsync(ns, labelSelector: $"{Constants.SecretLabelKey}={Constants.SecretLabelValue}");
                 clusterSecrets.AddRange(secrets.Items.Select(s => new Resource(s.Namespace(), s.Name())));
             }
 
@@ -89,7 +89,7 @@ namespace Operator.Handlers
             int succeededCount = 0;
             foreach (var secret in danglingSecrets)
             {
-                var apiResult = await client.InvokeAsync(c => c.DeleteNamespacedSecretAsync(secret.Name, secret.Namespace));
+                var apiResult = await client.InvokeAsync(c => c.CoreV1.DeleteNamespacedSecretAsync(secret.Name, secret.Namespace));
                 if (apiResult.IsSucceeded)
                 {
                     succeededCount++;
@@ -113,13 +113,13 @@ namespace Operator.Handlers
 
         private async Task FinalizeSecretsAsync(IKubernetes client, AzureKeyVault crd)
         {
-            var clusterNamespaces = (await client.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
+            var clusterNamespaces = (await client.CoreV1.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
             var managedSecrets = PatternResolver.ResolveManagedSecrets(clusterNamespaces, crd.Spec.ManagedSecrets);
             _logger.Information("Secret finalization is starting for {@resource}", managedSecrets);
 
             foreach (var secret in managedSecrets)
             {
-                var apiResult = await client.InvokeAsync(c => c.DeleteNamespacedSecretAsync(secret.Name, secret.Namespace));
+                var apiResult = await client.InvokeAsync(c => c.CoreV1.DeleteNamespacedSecretAsync(secret.Name, secret.Namespace));
 
                 if (apiResult.IsSucceeded)
                 {
@@ -141,40 +141,49 @@ namespace Operator.Handlers
                 var secretsNeedsToBeValid = PatternResolver.ResolveManagedSecrets(clusterNamespaces, crd.Value.Spec.ManagedSecrets);
                 foreach (var secret in secretsNeedsToBeValid)
                 {
-                    var apiResult = await client.InvokeAsync(c => c.ReadNamespacedSecretAsync(secret.Name, secret.Namespace));
+                    var forceUpdateFreq = Program.AppConfiguration.ForceUpdateFrequency;
+                    if (!(forceUpdateFreq.HasValue && _jobRunner.LastExecutedAt.HasValue && (DateTime.UtcNow - _jobRunner.LastExecutedAt) >= forceUpdateFreq))
+                    {
+                        var apiResult = await client.InvokeAsync(c => c.CoreV1.ReadNamespacedSecretAsync(secret.Name, secret.Namespace));
 
-                    var secretSyncVersion = apiResult.Data?.GetAnnotation(Constants.SecretSyncVersionAnnotation);
-                    if (apiResult.IsSucceeded && secretSyncVersion != null && Convert.ToInt32(secretSyncVersion) == crd.Value.Spec.SyncVersion)
-                    {
-                        _logger.Information("OnReconciliation : {resource} syncVersion:{version} is exist and syncVersions are same, no need to take action.", secret, secretSyncVersion);
-                        continue;
-                    }
+                        var secretSyncVersion = apiResult.Data?.GetAnnotation(Constants.SecretSyncVersionAnnotation);
+                        if (apiResult.IsSucceeded && secretSyncVersion != null && Convert.ToInt32(secretSyncVersion) == crd.Value.Spec.SyncVersion)
+                        {
+                            _logger.Information("OnReconciliation : {resource} syncVersion:{version} is exist and syncVersions are same, no need to take action.", secret, secretSyncVersion);
+                            continue;
+                        }
 
-                    //Secret is found but syncVersion is null (maybe manually deleted)
-                    if (apiResult.IsSucceeded && secretSyncVersion == null)
-                    {
-                        _logger.Warning("OnReconciliation : syncVersion of Secret is null, it will be processed.");
-                    }
-                    //Secret is found but syncVersion is changed
-                    else if (apiResult.IsSucceeded && secretSyncVersion != null)
-                    {
-                        _logger.Warning(
-                            "OnReconciliation : Expected {crdVersion} and actual {secretVersion} is not same, it will be processed.",
-                            crd.Value.Spec.SyncVersion, secretSyncVersion ?? "(null)");
-                    }
-                    //Secret is not found and we still responsible to manage it.
-                    else if (apiResult.Status == System.Net.HttpStatusCode.NotFound && Context.IsExist(crd.Key))
-                    {
-                        _logger.Warning(
-                            "OnReconciliation : Secret {secretResource} for {crdResource} is not found, it will be processed.",
-                            crd.Key, secret);
+                        //Secret is found but syncVersion is null (maybe manually deleted)
+                        if (apiResult.IsSucceeded && secretSyncVersion == null)
+                        {
+                            _logger.Warning("OnReconciliation : syncVersion of Secret is null, it will be processed.");
+                        }
+                        //Secret is found but syncVersion is changed
+                        else if (apiResult.IsSucceeded && secretSyncVersion != null)
+                        {
+                            _logger.Warning(
+                                "OnReconciliation : Expected {crdVersion} and actual {secretVersion} is not same, it will be processed.",
+                                crd.Value.Spec.SyncVersion, secretSyncVersion ?? "(null)");
+                        }
+                        //Secret is not found and we still responsible to manage it.
+                        else if (apiResult.Status == System.Net.HttpStatusCode.NotFound && Context.IsExist(crd.Key))
+                        {
+                            _logger.Warning(
+                                "OnReconciliation : Secret {secretResource} for {crdResource} is not found, it will be processed.",
+                                crd.Key, secret);
+                        }
+                        else
+                        {
+                            _logger.Error(
+                                apiResult.Exception, "OnReconciliation : Unexpected case {secretResource} {crdResource}",
+                                crd.Key, secret);
+                        }
                     }
                     else
                     {
-                        _logger.Error(
-                            apiResult.Exception, "OnReconciliation : Unexpected case {secretResource} {crdResource}",
-                            crd.Key, secret);
+                        _logger.Information("ForceUpdateFrequency ({freq} seconds) is passed. Secrets will be processed...", forceUpdateFreq.Value.TotalSeconds);
                     }
+                    
 
                     ServicePrincipalSecretContainer.Flush();
                     _jobRunner.Enqueue(crd.Value);

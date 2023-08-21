@@ -26,7 +26,7 @@
                     return result;
                 }
 
-                var apiResult = await Program.KubernetesClient.InvokeAsync(c => c.ReadNamespacedSecretAsync(resource.Name, resource.Namespace));
+                var apiResult = await Program.KubernetesClient.InvokeAsync(c => c.CoreV1.ReadNamespacedSecretAsync(resource.Name, resource.Namespace));
                 if (apiResult.Status == System.Net.HttpStatusCode.NotFound)
                 {
                     _logger.Error("Secret is not found at {resource}", resource);

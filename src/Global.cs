@@ -11,7 +11,7 @@ global using Operator.Extensions;
 global using OperatorFramework.Contracts;
 global using Serilog;
 global using Polly;
-global using Microsoft.Rest;
+global using k8s.Autorest;
 global using System;
 global using System.Collections.Concurrent;
 global using System.Collections.Generic;

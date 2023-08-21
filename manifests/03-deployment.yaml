@@ -19,7 +19,7 @@ spec:
       restartPolicy: Always
       containers:
       - name: operator
-        image: btungut/azure-keyvault-secret-operator:0.0.6
+        image: btungut/azure-keyvault-secret-operator:1.7.0
         env:
           # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)
           - name: logLevel
@@ -32,6 +32,9 @@ spec:
           # hh:mm:ss
           - name: reconciliationFrequency
             value: "00:00:30"
+
+          - name: forceUpdateFrequency
+            value: "00:03:00"
         resources:
           limits:
             memory: "128Mi"
