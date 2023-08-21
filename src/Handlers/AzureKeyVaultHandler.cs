@@ -56,7 +56,7 @@ namespace Operator.Handlers
 
             _logger.Information("OnReconciliation is starting");
 
-            var clusterNamespaces = (await client.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
+            var clusterNamespaces = (await client.CoreV1.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
             await ReconcileManagedSecrets(bag, client, clusterNamespaces);
             await ReconcileDanglingSecrets(bag, client, clusterNamespaces);
 
@@ -72,7 +72,7 @@ namespace Operator.Handlers
 
             foreach (var ns in clusterNamespaces)
             {
-                var secrets = await client.ListNamespacedSecretAsync(ns, labelSelector: $"{Constants.SecretLabelKey}={Constants.SecretLabelValue}");
+                var secrets = await client.CoreV1.ListNamespacedSecretAsync(ns, labelSelector: $"{Constants.SecretLabelKey}={Constants.SecretLabelValue}");
                 clusterSecrets.AddRange(secrets.Items.Select(s => new Resource(s.Namespace(), s.Name())));
             }
 
@@ -89,7 +89,7 @@ namespace Operator.Handlers
             int succeededCount = 0;
             foreach (var secret in danglingSecrets)
             {
-                var apiResult = await client.InvokeAsync(c => c.DeleteNamespacedSecretAsync(secret.Name, secret.Namespace));
+                var apiResult = await client.InvokeAsync(c => c.CoreV1.DeleteNamespacedSecretAsync(secret.Name, secret.Namespace));
                 if (apiResult.IsSucceeded)
                 {
                     succeededCount++;
@@ -113,13 +113,13 @@ namespace Operator.Handlers
 
         private async Task FinalizeSecretsAsync(IKubernetes client, AzureKeyVault crd)
         {
-            var clusterNamespaces = (await client.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
+            var clusterNamespaces = (await client.CoreV1.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
             var managedSecrets = PatternResolver.ResolveManagedSecrets(clusterNamespaces, crd.Spec.ManagedSecrets);
             _logger.Information("Secret finalization is starting for {@resource}", managedSecrets);
 
             foreach (var secret in managedSecrets)
             {
-                var apiResult = await client.InvokeAsync(c => c.DeleteNamespacedSecretAsync(secret.Name, secret.Namespace));
+                var apiResult = await client.InvokeAsync(c => c.CoreV1.DeleteNamespacedSecretAsync(secret.Name, secret.Namespace));
 
                 if (apiResult.IsSucceeded)
                 {
@@ -144,7 +144,7 @@ namespace Operator.Handlers
                     var forceUpdateFreq = Program.AppConfiguration.ForceUpdateFrequency;
                     if (!(forceUpdateFreq.HasValue && _jobRunner.LastExecutedAt.HasValue && (DateTime.UtcNow - _jobRunner.LastExecutedAt) >= forceUpdateFreq))
                     {
-                        var apiResult = await client.InvokeAsync(c => c.ReadNamespacedSecretAsync(secret.Name, secret.Namespace));
+                        var apiResult = await client.InvokeAsync(c => c.CoreV1.ReadNamespacedSecretAsync(secret.Name, secret.Namespace));
 
                         var secretSyncVersion = apiResult.Data?.GetAnnotation(Constants.SecretSyncVersionAnnotation);
                         if (apiResult.IsSucceeded && secretSyncVersion != null && Convert.ToInt32(secretSyncVersion) == crd.Value.Spec.SyncVersion)

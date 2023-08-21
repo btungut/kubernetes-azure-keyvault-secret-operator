@@ -71,7 +71,7 @@ namespace Operator.Domain.Jobs
                 return;
             }
 
-            var clusterNamespaces = (await _client.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
+            var clusterNamespaces = (await _client.CoreV1.ListNamespaceAsync()).Items.Select(x => x.Metadata.Name).ToArray();
             var managedSecrets = PatternResolver.ResolveManagedSecrets(clusterNamespaces, managedSecretDefinition);
             _logger.Debug("Total {count} secret will be created for {owner} namespace/name pairings : {pairs}", managedSecrets.Count(), owner.Metadata.Name, managedSecrets);
 
@@ -149,7 +149,7 @@ namespace Operator.Domain.Jobs
 
         private async Task CreateOrUpdateSecretAsync(AzureKeyVault owner, Resource resource, string secretType, Dictionary<string, byte[]> data, IDictionary<string, string> labels)
         {
-            var secretGetResult = await _client.InvokeAsync(c => c.ReadNamespacedSecretAsync(resource.Name, resource.Namespace));
+            var secretGetResult = await _client.InvokeAsync(c => c.CoreV1.ReadNamespacedSecretAsync(resource.Name, resource.Namespace));
 
             if (secretGetResult.IsSucceeded)
             {
@@ -158,7 +158,7 @@ namespace Operator.Domain.Jobs
                 V1Secret secret = secretGetResult.Data;
                 FillV1Secret(owner, secret, secretType, data, labels);
 
-                var replaceResult = await _client.InvokeAsync(c => c.ReplaceNamespacedSecretAsync(secret, resource.Name, resource.Namespace));
+                var replaceResult = await _client.InvokeAsync(c => c.CoreV1.ReplaceNamespacedSecretAsync(secret, resource.Name, resource.Namespace));
                 if (!replaceResult.IsSucceeded)
                 {
                     string requestContent = replaceResult.Exception.GetRequestContentIfPossible();
@@ -181,7 +181,7 @@ namespace Operator.Domain.Jobs
                 };
                 FillV1Secret(owner, secret, secretType, data, labels);
 
-                var createResult = await _client.InvokeAsync(c => c.CreateNamespacedSecretAsync(secret, resource.Namespace));
+                var createResult = await _client.InvokeAsync(c => c.CoreV1.CreateNamespacedSecretAsync(secret, resource.Namespace));
                 if (!createResult.IsSucceeded)
                 {
                     string requestContent = createResult.Exception.GetRequestContentIfPossible();

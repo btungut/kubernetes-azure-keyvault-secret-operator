@@ -55,8 +55,8 @@ namespace Operator
                 config = KubernetesClientConfiguration.BuildConfigFromConfigFile();
             }
             
+            config.HttpClientTimeout = TimeSpan.FromSeconds(10);
             KubernetesClient = new Kubernetes(config);
-            KubernetesClient.HttpClient.Timeout = TimeSpan.FromSeconds(10);
         }
 
         private static void Bootstrap()
