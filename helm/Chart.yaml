@@ -2,8 +2,8 @@ apiVersion: v2
 name: kubernetes-azure-keyvault-secret-operator
 description: Kubernetes Azure KeyVault Secret Operator
 type: application
-version: 0.0.6
-appVersion: "0.0.6"
+version: 1.7.0
+appVersion: "1.7.0"
 sources:
   - https://github.com/btungut/kubernetes-azure-keyvault-secret-operator
 home: https://github.com/btungut/kubernetes-azure-keyvault-secret-operator

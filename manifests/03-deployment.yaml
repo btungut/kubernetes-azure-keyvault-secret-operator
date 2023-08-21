@@ -19,7 +19,7 @@ spec:
       restartPolicy: Always
       containers:
       - name: operator
-        image: btungut/azure-keyvault-secret-operator:0.0.6
+        image: btungut/azure-keyvault-secret-operator:1.7.0
         env:
           # valid values: Verbose, Debug, Information, Warning, Error, Fatal (default : Information)
           - name: logLevel
